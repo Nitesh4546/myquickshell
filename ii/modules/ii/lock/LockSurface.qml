@@ -4,6 +4,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell.Services.UPower
 import qs
 import Quickshell.Io
+import qs.modules.ii.mediaControls
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -57,7 +58,67 @@ MouseArea {
             }
         }
     }
+    Loader {
+        id: lockscreenMediaController
+        active: root.mediaLoaderActive
+        anchors {
+            bottom: mainIsland.top
+            horizontalCenter: mainIsland.horizontalCenter
+            bottomMargin: 20
+        }
+        width: Appearance.sizes.mediaControlsWidth//420
+        height: Appearance.sizes.mediaControlsHeight//130
+        opacity: 0
+        scale: 0.9
 
+        sourceComponent: PlayerControl {
+            player: MprisController.activePlayer
+            visualizerPoints: root.visualizerPoints
+            radius: Appearance.rounding.large
+        }
+
+        onLoaded: {
+            mediaExitAnim.stop();
+            entryAnim.restart();
+        }
+
+        ParallelAnimation {
+            id: entryAnim
+            NumberAnimation {
+                target: lockscreenMediaController
+                property: "opacity"
+                to: 1
+                duration: Appearance.animation.elementMove.duration
+                easing.type: Appearance.animation.elementMove.type
+                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+            }
+            NumberAnimation {
+                target: lockscreenMediaController
+                property: "scale"
+                to: 1
+                duration: Appearance.animation.elementMove.duration
+                easing.type: Appearance.animation.elementMove.type
+                easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+            }
+        }
+
+        ParallelAnimation {
+            id: mediaExitAnim
+            NumberAnimation {
+                target: lockscreenMediaController
+                property: "opacity"
+                to: 0
+                duration: Appearance.animation.elementMoveFast.duration
+            }
+            NumberAnimation {
+                target: lockscreenMediaController
+                property: "scale"
+                to: 0.9
+                duration: Appearance.animation.elementMoveFast.duration
+            }
+            onFinished: root.mediaLoaderActive = false
+        }
+    }
     // Force focus on entry
     function forceFieldFocus() {
         passwordBox.forceActiveFocus();
@@ -107,7 +168,7 @@ MouseArea {
         }
         if (event.key === Qt.Key_Escape) { // Esc to clear
             root.context.currentText = "";
-        } 
+        }
         forceFieldFocus();
     }
     Keys.onReleased: event => {
@@ -198,7 +259,7 @@ MouseArea {
             Keys.onPressed: event => {
                 root.context.resetClearTimer();
             }
-            
+
             layer.enabled: true
             layer.effect: OpacityMask {
                 maskSource: Rectangle {
@@ -396,7 +457,7 @@ MouseArea {
         Layout.fillHeight: true
         Layout.leftMargin: 10
         Layout.rightMargin: 10
-        
+
 
         MaterialSymbol {
             anchors.verticalCenter: parent.verticalCenter
