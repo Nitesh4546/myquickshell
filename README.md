@@ -69,6 +69,8 @@ I plan to continue modifying this configuration and adding more features, includ
 - Better integration with Hyprland
 
 The goal is to build a complete personalized desktop environment that fits my daily workflow.
+TODO:
+1. Add a settings feature to the pomodoro to give the user more freedom.
 
 ---
 
