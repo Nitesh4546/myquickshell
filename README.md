@@ -71,6 +71,11 @@ I plan to continue modifying this configuration and adding more features, includ
 The goal is to build a complete personalized desktop environment that fits my daily workflow.
 TODO:
 1. Add a settings feature to the pomodoro to give the user more freedom.
+2. Adding timetable in the cheatsheet section
+    1. Having it work offline
+    2. adding a option for the user to select to sync it to their google calendar
+    3. send notification about an event before 5min of the event start time
+   
 
 ---
 
