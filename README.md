@@ -75,6 +75,8 @@ TODO:
     1. Having it work offline
     2. adding a option for the user to select to sync it to their google calendar
     3. send notification about an event before 5min of the event start time
+3. Adding OCR(from: Axtremely customizable shell)
+4. Power Menu(from: Axtremely customizable shell)
    
 
 ---
