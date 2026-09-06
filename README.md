@@ -104,5 +104,5 @@ Huge thanks to:
 ## 📖 Notes
 
 This repository is mainly for my personal customization and experimentation.
-
+I store my personal config that i use.
 If you want to use parts of this configuration, feel free to explore the code, but keep in mind that some features may depend on my personal setup, packages, or system configuration.
