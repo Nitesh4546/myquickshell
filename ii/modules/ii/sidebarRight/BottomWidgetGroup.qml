@@ -15,7 +15,8 @@ Rectangle {
     clip: true
     implicitHeight: collapsed ? collapsedBottomWidgetGroupRow.implicitHeight : 350
     property int selectedTab: Persistent.states.sidebar.bottomGroup.tab
-    property int previousIndex: -1
+    property int previousIndex: selectedTab
+    property bool readyForTabAnimation: false
     property bool collapsed: Persistent.states.sidebar.bottomGroup.collapsed
     property var tabs: [
         {
@@ -38,6 +39,13 @@ Rectangle {
         },
     ]
 
+    function switchToTab(index) {
+        if (index === root.selectedTab) return;
+        root.previousIndex = root.selectedTab;
+        root.selectedTab = index;
+        Persistent.states.sidebar.bottomGroup.tab = index;
+    }
+
     Behavior on implicitHeight {
         NumberAnimation {
             duration: Appearance.animation.elementMove.duration
@@ -46,34 +54,48 @@ Rectangle {
         }
     }
 
+    property bool contentVisible: !collapsed
+    property bool collapsedPillVisible: collapsed
+
     function setCollapsed(state) {
         Persistent.states.sidebar.bottomGroup.collapsed = state;
-        if (collapsed) {
-            bottomWidgetGroupRow.opacity = 0;
+        if (state) {
+            bottomWidgetGroupFadeInTimer.stop();
+            root.contentVisible = false;
+            collapseFadeInTimer.start();
         } else {
-            collapsedBottomWidgetGroupRow.opacity = 0;
+            collapseFadeInTimer.stop();
+            root.collapsedPillVisible = false;
+            bottomWidgetGroupFadeInTimer.start();
         }
-        collapseCleanFadeTimer.start();
     }
 
     Timer {
-        id: collapseCleanFadeTimer
-        interval: Appearance.animation.elementMove.duration / 2
+        id: bottomWidgetGroupFadeInTimer
+        interval: 80
         repeat: false
         onTriggered: {
-            if (collapsed)
-                collapsedBottomWidgetGroupRow.opacity = 1;
-            else
-                bottomWidgetGroupRow.opacity = 1;
+            if (!root.collapsed)
+                root.contentVisible = true;
+        }
+    }
+
+    Timer {
+        id: collapseFadeInTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            if (root.collapsed)
+                root.collapsedPillVisible = true;
         }
     }
 
     Keys.onPressed: event => {
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) && event.modifiers === Qt.ControlModifier) {
             if (event.key === Qt.Key_PageDown) {
-                root.selectedTab = Math.min(root.selectedTab + 1, root.tabs.length - 1);
+                root.switchToTab(Math.min(root.selectedTab + 1, root.tabs.length - 1));
             } else if (event.key === Qt.Key_PageUp) {
-                root.selectedTab = Math.max(root.selectedTab - 1, 0);
+                root.switchToTab(Math.max(root.selectedTab - 1, 0));
             }
             event.accepted = true;
         }
@@ -82,14 +104,14 @@ Rectangle {
     // The thing when collapsed
     RowLayout {
         id: collapsedBottomWidgetGroupRow
-        opacity: collapsed ? 1 : 0
+        opacity: root.collapsedPillVisible ? 1 : 0
         visible: opacity > 0
         Behavior on opacity {
             NumberAnimation {
                 id: collapsedBottomWidgetGroupRowFade
-                duration: Appearance.animation.elementMove.duration / 2
-                easing.type: Appearance.animation.elementMove.type
-                easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
             }
         }
 
@@ -114,7 +136,6 @@ Rectangle {
             property int remainingTasks: Todo.list.filter(task => !task.done).length
             Layout.margins: 10
             Layout.leftMargin: 0
-            // text: `${DateTime.collapsedCalendarFormat}   •   ${remainingTasks} task${remainingTasks > 1 ? "s" : ""}`
             text: Translation.tr("%1   •   %2 tasks").arg(DateTime.collapsedCalendarFormat).arg(remainingTasks)
             font.pixelSize: Appearance.font.pixelSize.large
             color: Appearance.colors.colOnLayer1
@@ -125,19 +146,18 @@ Rectangle {
     RowLayout {
         id: bottomWidgetGroupRow
 
-        opacity: collapsed ? 0 : 1
+        opacity: root.contentVisible ? 1 : 0
         visible: opacity > 0
         Behavior on opacity {
             NumberAnimation {
                 id: bottomWidgetGroupRowFade
-                duration: Appearance.animation.elementMove.duration / 2
-                easing.type: Appearance.animation.elementMove.type
-                easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                duration: Appearance.animation.elementMoveFast.duration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
             }
         }
 
         anchors.fill: parent
-        // implicitHeight: tabStack.implicitHeight
         spacing: 20
 
         // Navigation rail
@@ -165,8 +185,7 @@ Rectangle {
                         buttonText: modelData.name
                         buttonIcon: modelData.icon
                         onPressed: {
-                            root.selectedTab = index;
-                            Persistent.states.sidebar.bottomGroup.tab = index;
+                            root.switchToTab(index);
                         }
                     }
                 }
@@ -192,88 +211,129 @@ Rectangle {
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            // implicitHeight: tabStack.implicitHeight
+            clip: true
 
-            Loader {
-                id: tabStack
-                anchors.fill: parent
-                anchors.bottomMargin: -anchors.topMargin
+            Repeater {
+                id: tabRepeater
+                model: root.tabs
+                delegate: Item {
+                    id: tabWrapper
+                    required property int index
+                    required property var modelData
 
-                Component.onCompleted: {
-                    tabStack.source = root.tabs[root.selectedTab].widget;
-                }
+                    anchors.fill: parent
+                    property bool loaded: index === root.selectedTab
+                    visible: opacity > 0
+                    opacity: (index === root.selectedTab) ? 1 : 0
 
-                Connections {
-                    target: root
-                    function onSelectedTabChanged() {
-                        if (root.currentTab > root.previousIndex)
-                            tabSwitchBehavior.animation.down = true;
-                        else if (root.currentTab < root.previousIndex)
-                            tabSwitchBehavior.animation.down = false;
-                        tabStack.source = root.tabs[root.selectedTab].widget;
+                    transform: Translate {
+                        id: tabTranslate
+                        y: 0
+                    }
+
+                    Loader {
+                        id: tabLoader
+                        anchors.fill: parent
+                        active: tabWrapper.loaded
+                        source: modelData.widget
+                    }
+
+                    Connections {
+                        target: root
+                        function onSelectedTabChanged() {
+                            let enabled = Config.options?.sidebar?.tabAnimations ?? true;
+                            if (index === root.selectedTab) {
+                                tabWrapper.loaded = true;
+                                if (root.readyForTabAnimation && enabled) {
+                                    let goingDown = root.selectedTab > root.previousIndex;
+                                    enterAnim.fromY = goingDown ? 12 : -12;
+                                    enterAnim.restart();
+                                } else {
+                                    tabWrapper.opacity = 1;
+                                    tabTranslate.y = 0;
+                                }
+                            } else if (index === root.previousIndex) {
+                                if (root.readyForTabAnimation && enabled) {
+                                    let goingDown = root.selectedTab > root.previousIndex;
+                                    exitAnim.toY = goingDown ? -12 : 12;
+                                    exitAnim.restart();
+                                } else {
+                                    tabWrapper.opacity = 0;
+                                    tabTranslate.y = 0;
+                                }
+                            } else {
+                                tabWrapper.opacity = 0;
+                                tabTranslate.y = 0;
+                            }
+                        }
+                    }
+
+                    ParallelAnimation {
+                        id: enterAnim
+                        property real fromY: 12
+                        PropertyAnimation {
+                            target: tabTranslate
+                            property: "y"
+                            from: enterAnim.fromY
+                            to: 0
+                            duration: Appearance.animation.elementMoveFast.duration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+                        }
+                        PropertyAnimation {
+                            target: tabWrapper
+                            property: "opacity"
+                            from: 0
+                            to: 1
+                            duration: Appearance.animation.elementMoveFast.duration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                        }
+                    }
+
+                    ParallelAnimation {
+                        id: exitAnim
+                        property real toY: -12
+                        PropertyAnimation {
+                            target: tabTranslate
+                            property: "y"
+                            from: 0
+                            to: exitAnim.toY
+                            duration: Appearance.animation.elementMoveFast.duration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial
+                        }
+                        PropertyAnimation {
+                            target: tabWrapper
+                            property: "opacity"
+                            from: 1
+                            to: 0
+                            duration: Appearance.animation.elementMoveFast.duration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                        }
                     }
                 }
+            }
 
-                Behavior on source {
-                    id: tabSwitchBehavior
-                    animation: TabSwitchAnim {
-                        id: upAnim
-                        down: true
+            Timer {
+                id: preloadTimer
+                interval: 500
+                running: true
+                repeat: false
+                onTriggered: {
+                    for (let i = 0; i < tabRepeater.count; i++) {
+                        let item = tabRepeater.itemAt(i);
+                        if (item) item.loaded = true;
                     }
                 }
             }
         }
     }
 
-    component TabSwitchAnim: SequentialAnimation {
-        id: switchAnim
-        property bool down: false
-        ParallelAnimation {
-            PropertyAnimation {
-                target: tabStack
-                properties: "opacity"
-                to: 0
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
-            }
-            PropertyAnimation {
-                target: tabStack.anchors
-                properties: "topMargin"
-                to: 10 * (switchAnim.down ? -1 : 1)
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
-            }
-        }
-        PropertyAction {
-            target: tabStack
-            property: "source"
-            value: root.tabs[root.selectedTab].widget
-        } // The source change happens here
-        ParallelAnimation {
-            PropertyAnimation {
-                target: tabStack.anchors
-                properties: "topMargin"
-                from: 10 * -(switchAnim.down ? -1 : 1)
-                to: 0
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-            }
-            PropertyAnimation {
-                target: tabStack
-                properties: "opacity"
-                to: 1
-                duration: Appearance.animation.elementMoveFast.duration
-                easing.type: Easing.BezierSpline
-                easing.bezierCurve: Appearance.animation.elementMoveEnter.bezierCurve
-            }
-        }
-        ScriptAction {
-            script: {
-                root.previousIndex = root.selectedTab;
-            }
-        }
+    Component.onCompleted: {
+        Qt.callLater(() => {
+            root.readyForTabAnimation = true;
+        });
     }
 }

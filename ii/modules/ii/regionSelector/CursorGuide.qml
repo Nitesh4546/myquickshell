@@ -19,6 +19,8 @@ Item {
     case RegionSelection.SnipAction.Record:
     case RegionSelection.SnipAction.RecordWithSound:
         return Translation.tr("Record region");
+    case RegionSelection.SnipAction.Qr:
+        return Translation.tr("Scan QR code");
     }
     property string materialSymbol: switch (root.action) {
     case RegionSelection.SnipAction.Copy:
@@ -31,6 +33,8 @@ Item {
     case RegionSelection.SnipAction.Record:
     case RegionSelection.SnipAction.RecordWithSound:
         return "videocam";
+    case RegionSelection.SnipAction.Qr:
+        return "qr_code_scanner";
     default:
         return "";
     }

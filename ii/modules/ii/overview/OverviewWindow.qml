@@ -44,6 +44,8 @@ Item { // Window
     property bool hovered: false
     property bool pressed: false
 
+    readonly property bool restrictedMode: (Config?.options.overview.privacyMode ?? false) && !GlobalStates.overviewShowFull
+
     property bool centerIcons: Config.options.overview.centerIcons
     property real iconGapRatio: 0.06
     property real iconToWindowRatio: centerIcons ? 0.35 : 0.15
@@ -90,55 +92,87 @@ Item { // Window
         animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
     }
 
-    ScreencopyView {
-        id: windowPreview
+    Rectangle {
+        id: baseTile
         anchors.fill: parent
-        captureSource: GlobalStates.overviewOpen ? root.toplevel : null
-        live: true
+        topLeftRadius: root.topLeftRadius
+        topRightRadius: root.topRightRadius
+        bottomRightRadius: root.bottomRightRadius
+        bottomLeftRadius: root.bottomLeftRadius
+        color: Appearance.colors.colLayer2
+    }
 
-        // Color overlay for interactions
-        Rectangle {
-            anchors.fill: parent
-            topLeftRadius: root.topLeftRadius
-            topRightRadius: root.topRightRadius
-            bottomRightRadius: root.bottomRightRadius
-            bottomLeftRadius: root.bottomLeftRadius
-            color: pressed ? ColorUtils.transparentize(Appearance.colors.colLayer2Active, 0.5) : 
-                hovered ? ColorUtils.transparentize(Appearance.colors.colLayer2Hover, 0.7) : 
-                ColorUtils.transparentize(Appearance.colors.colLayer2)
-            border.color : ColorUtils.transparentize(Appearance.m3colors.m3outline, 0.88)
-            border.width : 1
+    Loader {
+        id: previewLoader
+        anchors.fill: parent
+        active: !root.restrictedMode && GlobalStates.overviewOpen
+        opacity: root.restrictedMode ? 0 : 1
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
+        sourceComponent: ScreencopyView {
+            captureSource: (GlobalStates.overviewOpen && !root.restrictedMode) ? root.toplevel : null
+            live: true
+        }
+    }
 
-        StyledImage {
-            id: windowIcon
-            property real baseSize: Math.min(root.targetWindowWidth, root.targetWindowHeight)
-            anchors {
-                top: root.centerIcons ? undefined : parent.top
-                left: root.centerIcons ? undefined : parent.left
-                centerIn: root.centerIcons ? parent : undefined
-                margins: baseSize * root.iconGapRatio
-            }
-            property var iconSize: {
-                // console.log("-=-=-", root.toplevel.title, "-=-=-")
-                // console.log("Target window size:", targetWindowWidth, targetWindowHeight)
-                // console.log("Icon ratio:", root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio)
-                // console.log("Scale:", root.monitorData.scale)
-                // console.log("Final:", Math.min(targetWindowWidth, targetWindowHeight) * (root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio) / root.monitorData.scale)
-                return baseSize * (root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio);
-            }
-            mipmap: true
-            Layout.alignment: Qt.AlignHCenter
-            source: root.iconPath
-            width: iconSize
-            height: iconSize
+    // Color overlay for interactions and restricted mode themed tile
+    Rectangle {
+        id: windowTile
+        anchors.fill: parent
+        topLeftRadius: root.topLeftRadius
+        topRightRadius: root.topRightRadius
+        bottomRightRadius: root.bottomRightRadius
+        bottomLeftRadius: root.bottomLeftRadius
+        color: root.restrictedMode ? (
+            pressed ? Appearance.colors.colLayer2Active : 
+            hovered ? Appearance.colors.colLayer2Hover : 
+            Appearance.colors.colLayer2
+        ) : (
+            pressed ? ColorUtils.transparentize(Appearance.colors.colLayer2Active, 0.5) : 
+            hovered ? ColorUtils.transparentize(Appearance.colors.colLayer2Hover, 0.7) : 
+            ColorUtils.transparentize(Appearance.colors.colLayer2)
+        )
+        border.color: root.restrictedMode ? 
+            Appearance.colors.colLayer2Hover : 
+            ColorUtils.transparentize(Appearance.m3colors.m3outline, 0.88)
+        border.width: 1
 
-            Behavior on width {
-                animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+        Behavior on color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
+        Behavior on border.color {
+            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+        }
+    }
+
+    StyledImage {
+        id: windowIcon
+        property real baseSize: Math.min(root.targetWindowWidth, root.targetWindowHeight)
+        property bool shouldCenter: root.restrictedMode || root.centerIcons
+        anchors {
+            top: windowIcon.shouldCenter ? undefined : parent.top
+            left: windowIcon.shouldCenter ? undefined : parent.left
+            centerIn: windowIcon.shouldCenter ? parent : undefined
+            margins: baseSize * root.iconGapRatio
+        }
+        property var iconSize: {
+            if (root.restrictedMode) {
+                return Math.max(16, Math.min(baseSize * 0.5, 96));
             }
-            Behavior on height {
-                animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-            }
+            return baseSize * (root.compactMode ? root.iconToWindowRatioCompact : root.iconToWindowRatio);
+        }
+        mipmap: true
+        Layout.alignment: Qt.AlignHCenter
+        source: root.iconPath
+        width: iconSize
+        height: iconSize
+
+        Behavior on width {
+            animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+        }
+        Behavior on height {
+            animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
         }
     }
 }

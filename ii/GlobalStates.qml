@@ -10,6 +10,8 @@ pragma ComponentBehavior: Bound
 Singleton {
     id: root
     property bool barOpen: true
+    property bool cheatsheetOpen: false
+    signal openCheatsheetTab(int tabIndex)
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
     property bool sidebarRightOpen: false
@@ -19,6 +21,7 @@ Singleton {
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false
+    property bool overviewShowFull: false
     property bool regionSelectorOpen: false
     property bool searchOpen: false
     property bool screenLocked: false
@@ -30,6 +33,12 @@ Singleton {
     property bool superReleaseMightTrigger: true
     property bool wallpaperSelectorOpen: false
     property bool workspaceShowNumbers: false
+
+    onOverviewOpenChanged: {
+        if (!root.overviewOpen) {
+            root.overviewShowFull = false;
+        }
+    }
 
     onSidebarRightOpenChanged: {
         if (GlobalStates.sidebarRightOpen) {

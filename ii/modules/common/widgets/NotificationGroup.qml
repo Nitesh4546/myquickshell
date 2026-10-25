@@ -157,6 +157,7 @@ MouseArea { // Notification group area
                 Layout.fillWidth: false
                 image: root?.multipleNotifications ? "" : notificationGroup?.notifications[0]?.image ?? ""
                 appIcon: root.notificationGroup?.appIcon
+                appName: root.notificationGroup?.appName ?? ""
                 summary: root.notificationGroup?.notifications[root.notificationCount - 1]?.summary
                 urgency: root.notifications.some(n => n.urgency === NotificationUrgency.Critical.toString()) ? 
                     NotificationUrgency.Critical : NotificationUrgency.Normal

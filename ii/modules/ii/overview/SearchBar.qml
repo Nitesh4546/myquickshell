@@ -14,6 +14,7 @@ RowLayout {
     property bool animateWidth: false
     property alias searchInput: searchInput
     property string searchingText
+    property Item searchWidget: null
 
     function forceFocus() {
         searchInput.forceActiveFocus();
@@ -60,6 +61,7 @@ RowLayout {
     }
     ToolbarTextField { // Search box
         id: searchInput
+        Layout.fillWidth: true
         Layout.topMargin: 4
         Layout.bottomMargin: 4
         implicitHeight: 40
@@ -81,37 +83,86 @@ RowLayout {
         onTextChanged: LauncherSearch.query = text
 
         onAccepted: {
-            const idx = appResults.currentIndex >= 0 ? appResults.currentIndex : 0;
-            const entry = resultModel.values?.[idx];
-            if (entry && !entry.isSeparator && entry.execute) {
-                GlobalStates.overviewOpen = false;
-                entry.execute();
+            if (root.searchWidget?.isTwoPane && root.searchWidget?.activePane === "right") {
+                const idx = root.searchWidget.pinnedCurrentIndex >= 0 ? root.searchWidget.pinnedCurrentIndex : 0;
+                const entry = root.searchWidget.pinnedResults?.[idx];
+                if (entry && entry.execute) {
+                    GlobalStates.overviewOpen = false;
+                    entry.execute();
+                }
+            } else {
+                const idx = appResults.currentIndex >= 0 ? appResults.currentIndex : 0;
+                const entry = resultModel.values?.[idx];
+                if (entry && !entry.isSeparator && entry.execute) {
+                    GlobalStates.overviewOpen = false;
+                    entry.execute();
+                }
             }
         }
 
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Tab) {
-                if (LauncherSearch.results.length === 0) return;
-                const tabbedText = LauncherSearch.results[0].name;
-                LauncherSearch.query = tabbedText;
-                searchInput.text = tabbedText;
+                let tabbedText = "";
+                if (root.searchWidget?.isTwoPane && root.searchWidget?.activePane === "right") {
+                    const idx = root.searchWidget.pinnedCurrentIndex >= 0 ? root.searchWidget.pinnedCurrentIndex : 0;
+                    tabbedText = root.searchWidget.pinnedResults?.[idx]?.name ?? "";
+                } else {
+                    const idx = appResults.currentIndex >= 0 ? appResults.currentIndex : 0;
+                    tabbedText = resultModel.values?.[idx]?.name ?? (LauncherSearch.results[0]?.name ?? "");
+                }
+                if (tabbedText) {
+                    LauncherSearch.query = tabbedText;
+                    searchInput.text = tabbedText;
+                }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Down) {
-                const values = resultModel.values ?? [];
-                let next = appResults.currentIndex + 1;
-                while (next < values.length && values[next]?.isSeparator)
-                    next++;
-                if (next < values.length)
-                    appResults.currentIndex = next;
+                if (root.searchWidget?.isTwoPane && root.searchWidget?.activePane === "right") {
+                    root.searchWidget.moveSelectionDownRight();
+                } else {
+                    const values = resultModel.values ?? [];
+                    let next = appResults.currentIndex + 1;
+                    while (next < values.length && values[next]?.isSeparator)
+                        next++;
+                    if (next < values.length)
+                        appResults.currentIndex = next;
+                }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Up) {
-                const values = resultModel.values ?? [];
-                let prev = appResults.currentIndex - 1;
-                while (prev >= 0 && values[prev]?.isSeparator)
-                    prev--;
-                if (prev >= 0)
-                    appResults.currentIndex = prev;
+                if (root.searchWidget?.isTwoPane && root.searchWidget?.activePane === "right") {
+                    root.searchWidget.moveSelectionUpRight();
+                } else {
+                    const values = resultModel.values ?? [];
+                    let prev = appResults.currentIndex - 1;
+                    while (prev >= 0 && values[prev]?.isSeparator)
+                        prev--;
+                    if (prev >= 0)
+                        appResults.currentIndex = prev;
+                }
                 event.accepted = true;
+            } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
+                if (root.searchWidget) {
+                    root.searchWidget.togglePinSelected();
+                }
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Delete && (event.modifiers & Qt.ShiftModifier)) {
+                if (root.searchWidget) {
+                    root.searchWidget.deleteOrUnpinSelected();
+                }
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Right) {
+                if (event.modifiers & Qt.ControlModifier) {
+                    if (root.searchWidget?.isTwoPane) {
+                        root.searchWidget.activePane = "right";
+                        event.accepted = true;
+                    }
+                }
+            } else if (event.key === Qt.Key_Left) {
+                if (event.modifiers & Qt.ControlModifier) {
+                    if (root.searchWidget?.isTwoPane) {
+                        root.searchWidget.activePane = "left";
+                        event.accepted = true;
+                    }
+                }
             }
         }
     }
@@ -126,6 +177,19 @@ RowLayout {
         text: "image_search"
         StyledToolTip {
             text: Translation.tr("Google Lens")
+        }
+    }
+
+    IconToolbarButton {
+        Layout.topMargin: 4
+        Layout.bottomMargin: 4
+        onClicked: {
+            GlobalStates.overviewOpen = false;
+            Quickshell.execDetached(["qs", "-p", Quickshell.shellPath(""), "ipc", "call", "region", "qr"]);
+        }
+        text: "qr_code_scanner"
+        StyledToolTip {
+            text: Translation.tr("Scan QR code")
         }
     }
 

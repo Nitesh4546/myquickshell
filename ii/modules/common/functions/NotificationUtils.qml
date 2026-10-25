@@ -5,13 +5,35 @@ Singleton {
     id: root
     /**
      * @param { string } summary 
+     * @param { string } appName 
      * @returns { string }
      */
-    function findSuitableMaterialSymbol(summary = "") {
+    function findSuitableMaterialSymbol(summary = "", appName = "") {
         const defaultType = 'chat';
+        const lowerSummary = (summary || "").toLowerCase();
+        const lowerAppName = (appName || "").toLowerCase();
+
+        if (lowerAppName.includes('calendar') || lowerAppName.includes('timetable') || lowerAppName.includes('schedule')) {
+            return 'calendar_month';
+        }
+
+        if (lowerAppName.includes('to do') || lowerAppName.includes('todo') || lowerAppName.includes('task')) {
+            return 'done_outline';
+        }
+
         if (summary.length === 0) return defaultType;
 
         const keywordsToTypes = {
+            'todo': 'done_outline',
+            'to do': 'done_outline',
+            'task': 'done_outline',
+            'calendar': 'calendar_month',
+            'timetable': 'calendar_month',
+            'event': 'calendar_month',
+            'schedule': 'calendar_month',
+            'appointment': 'calendar_month',
+            'meeting': 'calendar_month',
+            'reminder': 'calendar_month',
             'reboot': 'restart_alt',
             'record': 'screen_record',
             'battery': 'power',
@@ -34,8 +56,6 @@ Singleton {
             'preedit': 'keyboard_alt',
             'startswith:file': 'folder_copy', // Declarative startsWith check
         };
-
-        const lowerSummary = summary.toLowerCase();
 
         for (const [keyword, type] of Object.entries(keywordsToTypes)) {
             if (keyword.startsWith('startswith:')) {

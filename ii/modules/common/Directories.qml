@@ -34,6 +34,9 @@ Singleton {
     property string shellConfigName: "config.json"
     property string shellConfigPath: `${Directories.shellConfig}/${Directories.shellConfigName}`
 	property string todoPath: FileUtils.trimFileProtocol(`${Directories.state}/user/todo.json`)
+    property string usagePath: FileUtils.trimFileProtocol(`${Directories.state}/user/app_usage.json`)
+    property string clipboardPinsPath: FileUtils.trimFileProtocol(`${Directories.state}/user/clipboard_pins.json`)
+    property string clipboardPinsDir: FileUtils.trimFileProtocol(`${Directories.state}/user/clipboard_pins`)
     property string calendarLocalDataPath: FileUtils.trimFileProtocol(`${Directories.state}/user/calendar_local.json`)
 	property string notesPath: FileUtils.trimFileProtocol(`${Directories.state}/user/notes.txt`)
 	property string conflictCachePath: FileUtils.trimFileProtocol(`${Directories.cache}/conflict-killer`)
@@ -62,6 +65,7 @@ Singleton {
         Quickshell.execDetached(["bash", "-c", `rm -rf '${cliphistDecode}'; mkdir -p '${cliphistDecode}'`])
         Quickshell.execDetached(["mkdir", "-p", `${aiChats}`])
         Quickshell.execDetached(["mkdir", "-p", `${userActions}`])
+        Quickshell.execDetached(["mkdir", "-p", `${clipboardPinsDir}`])
         Quickshell.execDetached(["rm", "-rf", `${tempImages}`])
     }
 }

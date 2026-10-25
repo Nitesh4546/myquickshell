@@ -614,4 +614,59 @@ ContentPage {
             }
         }
     }
+
+    ContentSection {
+        icon: "bar_chart"
+        title: Translation.tr("Widget: Usage")
+
+        ConfigRow {
+            Layout.fillWidth: true
+
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "check"
+                text: Translation.tr("Enable")
+                checked: Config.options.background.widgets.usage.enable
+                onCheckedChanged: {
+                    Config.options.background.widgets.usage.enable = checked;
+                }
+            }
+            ConfigSwitch {
+                Layout.fillWidth: false
+                buttonIcon: "contract"
+                text: Translation.tr("Compact")
+                checked: Config.options.background.widgets.usage.compact
+                onCheckedChanged: {
+                    Config.options.background.widgets.usage.compact = checked;
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            ConfigSelectionArray {
+                Layout.fillWidth: false
+                currentValue: Config.options.background.widgets.usage.placementStrategy
+                onSelected: newValue => {
+                    Config.options.background.widgets.usage.placementStrategy = newValue;
+                }
+                options: [
+                    {
+                        displayName: Translation.tr("Draggable"),
+                        icon: "drag_pan",
+                        value: "free"
+                    },
+                    {
+                        displayName: Translation.tr("Least busy"),
+                        icon: "category",
+                        value: "leastBusy"
+                    },
+                    {
+                        displayName: Translation.tr("Most busy"),
+                        icon: "shapes",
+                        value: "mostBusy"
+                    },
+                ]
+            }
+        }
+    }
 }

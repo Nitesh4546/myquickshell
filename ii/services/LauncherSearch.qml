@@ -164,6 +164,56 @@ Singleton {
         }
     }
 
+    property list<var> pinnedResults: {
+        if (!root.query.startsWith(Config.options.search.prefix.clipboard))
+            return [];
+        if (!ClipboardPins.hasPins)
+            return [];
+        const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.clipboard).trim();
+        let matchedPins = ClipboardPins.pins;
+        if (searchString !== "") {
+            const prepared = ClipboardPins.pins.map(p => ({
+                name: Fuzzy.prepare(p.preview || ""),
+                pin: p
+            }));
+            matchedPins = Fuzzy.go(searchString, prepared, {
+                all: true,
+                key: "name"
+            }).map(r => r.obj.pin);
+        }
+        return matchedPins.map(pin => {
+            const isImage = pin.kind === "image";
+            return resultComp.createObject(null, {
+                type: Translation.tr("Pinned"),
+                name: pin.preview || "",
+                rawValue: pin.preview || "",
+                sourcePath: isImage ? (pin.file || "") : "",
+                verb: Translation.tr("Copy"),
+                execute: () => {
+                    ClipboardPins.copy(pin);
+                },
+                actions: [
+                    resultComp.createObject(null, {
+                        name: Translation.tr("Copy"),
+                        iconName: "content_copy",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            ClipboardPins.copy(pin);
+                        }
+                    }),
+                    resultComp.createObject(null, {
+                        name: Translation.tr("Unpin"),
+                        iconName: "keep_off",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            ClipboardPins.unpin(pin.id);
+                        }
+                    })
+                ]
+            });
+        }).filter(Boolean);
+    }
+
     property list<var> results: {
         // Search results are handled here
         ////////////////// Skip? //////////////////
@@ -173,8 +223,9 @@ Singleton {
         ///////////// Special cases ///////////////
         if (root.query.startsWith(Config.options.search.prefix.clipboard)) {
             // Clipboard
+            const _cliphistEntries = Cliphist.entries;
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.clipboard);
-            return Cliphist.fuzzyQuery(searchString).map((entry, index, array) => {
+            return Cliphist.fuzzyQuery(searchString).filter(entry => !ClipboardPins.isPinned(entry)).map((entry, index, array) => {
                 const mightBlurImage = Cliphist.entryIsImage(entry) && root.clipboardWorkSafetyActive;
                 let shouldBlurImage = mightBlurImage;
                 if (mightBlurImage) {
@@ -189,21 +240,32 @@ Singleton {
                     execute: () => {
                         Cliphist.copy(entry);
                     },
-                    actions: [resultComp.createObject(null, {
+                    actions: [
+                        resultComp.createObject(null, {
                             name: Translation.tr("Copy"),
                             iconName: "content_copy",
                             iconType: LauncherSearchResult.IconType.Material,
                             execute: () => {
                                 Cliphist.copy(entry);
                             }
-                        }), resultComp.createObject(null, {
+                        }),
+                        resultComp.createObject(null, {
+                            name: Translation.tr("Pin"),
+                            iconName: "push_pin",
+                            iconType: LauncherSearchResult.IconType.Material,
+                            execute: () => {
+                                ClipboardPins.pin(entry);
+                            }
+                        }),
+                        resultComp.createObject(null, {
                             name: Translation.tr("Delete"),
                             iconName: "delete",
                             iconType: LauncherSearchResult.IconType.Material,
                             execute: () => {
                                 Cliphist.deleteEntry(entry);
                             }
-                        })],
+                        })
+                    ],
                     blurImage: shouldBlurImage
                 });
             }).filter(Boolean);

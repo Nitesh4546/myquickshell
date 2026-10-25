@@ -100,13 +100,15 @@ Singleton {
 
     Process {
         id: wipeProc
-        command: [root.cliphistBinary, "wipe"]
+        command: ["bash", "-c", `${root.cliphistBinary} wipe && wl-copy --clear`]
         onExited: (exitCode, exitStatus) => {
             root.refresh();
         }
     }
 
     function wipe() {
+        Quickshell.execDetached(["wl-copy", "--clear"]);
+        root.entries = [];
         wipeProc.running = true;
     }
 
@@ -152,6 +154,10 @@ Singleton {
 
         function update(): void {
             root.refresh()
+        }
+
+        function wipe(): void {
+            root.wipe()
         }
     }
 }

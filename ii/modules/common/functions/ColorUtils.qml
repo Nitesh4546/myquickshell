@@ -136,6 +136,11 @@ Singleton {
         return c.hslLightness < 0.5;
     }
 
+    function getContrastingTextColor(color) {
+        if (!color) return "#ffffff";
+        return isDark(color) ? "#ffffff" : "#000000";
+    }
+
     /**
      * Clamps a value to the inclusive range [0, 1].
      *

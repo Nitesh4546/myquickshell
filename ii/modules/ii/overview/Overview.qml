@@ -45,6 +45,7 @@ Scope {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
                     GlobalFocusGrab.dismiss();
+                    GlobalStates.overviewShowFull = false;
                 } else {
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch();
@@ -123,6 +124,17 @@ Scope {
         GlobalStates.overviewOpen = true;
     }
 
+    function toggleFull() {
+        if (!GlobalStates.overviewOpen) {
+            GlobalStates.overviewShowFull = true;
+            GlobalStates.overviewOpen = true;
+        } else if (Config?.options.overview.privacyMode && !GlobalStates.overviewShowFull) {
+            GlobalStates.overviewShowFull = true;
+        } else {
+            GlobalStates.overviewOpen = false;
+        }
+    }
+
     IpcHandler {
         target: "search"
 
@@ -143,6 +155,12 @@ Scope {
         }
         function clipboardToggle() {
             overviewScope.toggleClipboard();
+        }
+        function fullToggle() {
+            overviewScope.toggleFull();
+        }
+        function workspacesToggleFull() {
+            overviewScope.toggleFull();
         }
     }
 
@@ -168,6 +186,14 @@ Scope {
 
         onPressed: {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
+        }
+    }
+    GlobalShortcut {
+        name: "overviewWorkspacesToggleFull"
+        description: "Toggles full overview on press"
+
+        onPressed: {
+            overviewScope.toggleFull();
         }
     }
     GlobalShortcut {

@@ -14,6 +14,14 @@ Item {
 
     // These are keybinds for stopwatch and pomodoro
     Keys.onPressed: (event) => {
+        if (pomodoroTimerTab.editorOpen) {
+            if (event.key === Qt.Key_Escape) {
+                pomodoroTimerTab.editorOpen = false;
+                event.accepted = true;
+            }
+            return;
+        }
+
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp) && event.modifiers === Qt.NoModifier) { // Switch tabs
             if (event.key === Qt.Key_PageDown) {
                 tabBar.incrementCurrentIndex();
@@ -47,7 +55,7 @@ Item {
 
         SecondaryTabBar {
             id: tabBar
-            currentIndex: swipeView.currentIndex
+            currentIndex: 0
 
             Repeater {
                 model: root.tabButtonList
@@ -58,18 +66,52 @@ Item {
             }
         }
 
-        SwipeView {
-            id: swipeView
+        Item {
+            id: contentArea
             Layout.topMargin: 10
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 10
             clip: true
-            currentIndex: tabBar.currentIndex
 
-            // Tabs
-            PomodoroTimer {}
-            Stopwatch {}
+            PomodoroTimer {
+                id: pomodoroTimerTab
+                anchors.fill: parent
+                visible: opacity > 0
+                opacity: tabBar.currentIndex === 0 ? 1 : 0
+                Behavior on opacity {
+                    enabled: Config.options?.sidebar?.tabAnimations ?? true
+                    NumberAnimation {
+                        duration: Appearance.animation.elementMoveFast.duration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                    }
+                }
+            }
+
+            Stopwatch {
+                id: stopwatchTab
+                anchors.fill: parent
+                visible: opacity > 0
+                opacity: tabBar.currentIndex === 1 ? 1 : 0
+                Behavior on opacity {
+                    enabled: Config.options?.sidebar?.tabAnimations ?? true
+                    NumberAnimation {
+                        duration: Appearance.animation.elementMoveFast.duration
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                    }
+                }
+            }
+
+            TimerControlRow {
+                id: timerControlRow
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 6
+                anchors.horizontalCenter: parent.horizontalCenter
+                currentIndex: tabBar.currentIndex
+                visible: !(tabBar.currentIndex === 0 && pomodoroTimerTab.editorOpen)
+                z: 1
+            }
         }
     }
 }

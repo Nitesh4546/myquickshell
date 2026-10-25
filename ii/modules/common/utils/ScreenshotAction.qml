@@ -19,7 +19,8 @@ Singleton {
         Search,
         CharRecognition,
         Record,
-        RecordWithSound
+        RecordWithSound,
+        Qr
     }
 
     property string imageSearchEngineBaseUrl: Config.options.search.imageSearch.imageSearchEngineBaseUrl
@@ -72,6 +73,9 @@ Singleton {
                 break;
             case ScreenshotAction.Action.RecordWithSound:
                 return ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --sound`]
+                break;
+            case ScreenshotAction.Action.Qr:
+                return ["bash", "-c", `${cropInPlace} && '${Directories.scriptPath}/qr/scan-qr.sh' '${StringUtils.shellSingleQuoteEscape(screenshotPath)}'`]
                 break;
             default:
                 console.warn("[Region Selector] Unknown snip action, skipping snip.");

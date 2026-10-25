@@ -357,6 +357,18 @@ Item { // Bar content region
                         iconSize: Appearance.font.pixelSize.larger
                         color: rightSidebarButton.colText
                     }
+                    Revealer {
+                        reveal: (Config.options?.bar?.privacyIndicator ?? true) && Privacy.anyActive
+                        Layout.fillHeight: true
+                        Layout.leftMargin: reveal ? 8 : 0
+                        Behavior on Layout.leftMargin {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
+
+                        PrivacyIndicator {
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
                 }
             }
 
@@ -379,6 +391,20 @@ Item { // Bar content region
 
                 sourceComponent: BarGroup {
                     WeatherBar {}
+                }
+            }
+
+            // Next event & task indicator
+            Loader {
+                Layout.leftMargin: (item && item.hasItem) ? 4 : 0
+                Layout.preferredWidth: (item && item.hasItem) ? item.implicitWidth : 0
+                Layout.preferredHeight: item ? item.implicitHeight : 0
+                Layout.alignment: Qt.AlignVCenter
+                active: Config.options?.bar?.nextEvent?.enable ?? true
+                visible: active && item && item.hasItem
+
+                sourceComponent: NextEventWidget {
+                    useShortenedForm: root.useShortenedForm
                 }
             }
         }

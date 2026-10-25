@@ -30,6 +30,8 @@ ShellRoot {
         Cliphist.refresh()
         Wallpapers.load()
         Updates.load()
+        UsageTracker.isTracker = true
+        UsageTracker.load()
     }
 
 

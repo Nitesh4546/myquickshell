@@ -22,9 +22,16 @@ Singleton {
     property bool pomodoroRunning: Persistent.states.timer.pomodoro.running
     property bool pomodoroBreak: Persistent.states.timer.pomodoro.isBreak
     property bool pomodoroLongBreak: Persistent.states.timer.pomodoro.isBreak && (pomodoroCycle + 1 == cyclesBeforeLongBreak);
-    property int pomodoroLapDuration: pomodoroLongBreak ? longBreakTime : pomodoroBreak ? breakTime : focusTime // This is a binding that's to be kept
+    readonly property int targetLapDuration: pomodoroLongBreak ? longBreakTime : pomodoroBreak ? breakTime : focusTime
+    property int pomodoroLapDuration: (Persistent.states.timer.pomodoro.phaseDuration > 0) ? Persistent.states.timer.pomodoro.phaseDuration : targetLapDuration
     property int pomodoroSecondsLeft: pomodoroLapDuration // Reasonable init value, to be changed
     property int pomodoroCycle: Persistent.states.timer.pomodoro.cycle
+
+    onPomodoroLapDurationChanged: {
+        if (!pomodoroRunning && Persistent.states.timer.pomodoro.phaseDuration <= 0) {
+            pomodoroSecondsLeft = pomodoroLapDuration;
+        }
+    }
 
     property bool stopwatchRunning: Persistent.states.timer.stopwatch.running
     property int stopwatchTime: 0
@@ -35,6 +42,16 @@ Singleton {
     Component.onCompleted: {
         if (!stopwatchRunning)
             stopwatchReset();
+
+        if (pomodoroRunning) {
+            refreshPomodoro();
+        } else if (Persistent.states.timer.pomodoro.pausedSecondsLeft > 0 && Persistent.states.timer.pomodoro.phaseDuration > 0) {
+            pomodoroSecondsLeft = Math.max(0, Math.min(pomodoroLapDuration, Persistent.states.timer.pomodoro.pausedSecondsLeft));
+        } else {
+            Persistent.states.timer.pomodoro.phaseDuration = 0;
+            Persistent.states.timer.pomodoro.pausedSecondsLeft = 0;
+            pomodoroSecondsLeft = pomodoroLapDuration;
+        }
     }
 
     function getCurrentTimeInSeconds() {  // Pomodoro uses Seconds
@@ -53,9 +70,19 @@ Singleton {
             Persistent.states.timer.pomodoro.isBreak = !Persistent.states.timer.pomodoro.isBreak;
             Persistent.states.timer.pomodoro.start = getCurrentTimeInSeconds();
 
+            if (!pomodoroBreak) {
+                Persistent.states.timer.pomodoro.cycle = (Persistent.states.timer.pomodoro.cycle + 1) % root.cyclesBeforeLongBreak;
+            }
+
+            // Lock in the new phase duration using current config
+            let isLong = Persistent.states.timer.pomodoro.isBreak && (Persistent.states.timer.pomodoro.cycle + 1 == root.cyclesBeforeLongBreak);
+            let nextDuration = isLong ? root.longBreakTime : (Persistent.states.timer.pomodoro.isBreak ? root.breakTime : root.focusTime);
+            Persistent.states.timer.pomodoro.phaseDuration = nextDuration;
+            Persistent.states.timer.pomodoro.pausedSecondsLeft = 0;
+
             // Send notification
             let notificationMessage;
-            if (Persistent.states.timer.pomodoro.isBreak && (pomodoroCycle + 1 == cyclesBeforeLongBreak)) {
+            if (isLong) {
                 notificationMessage = Translation.tr(`🌿 Long break: %1 minutes`).arg(Math.floor(longBreakTime / 60));
             } else if (Persistent.states.timer.pomodoro.isBreak) {
                 notificationMessage = Translation.tr(`☕ Break: %1 minutes`).arg(Math.floor(breakTime / 60));
@@ -67,13 +94,9 @@ Singleton {
             if (Config.options.sounds.pomodoro) {
                 Audio.playSystemSound("alarm-clock-elapsed")
             }
-
-            if (!pomodoroBreak) {
-                Persistent.states.timer.pomodoro.cycle = (Persistent.states.timer.pomodoro.cycle + 1) % root.cyclesBeforeLongBreak;
-            }
         }
 
-        pomodoroSecondsLeft = pomodoroLapDuration - (getCurrentTimeInSeconds() - Persistent.states.timer.pomodoro.start);
+        pomodoroSecondsLeft = Math.max(0, pomodoroLapDuration - (getCurrentTimeInSeconds() - Persistent.states.timer.pomodoro.start));
     }
 
     Timer {
@@ -88,7 +111,14 @@ Singleton {
         Persistent.states.timer.pomodoro.running = !pomodoroRunning;
         if (Persistent.states.timer.pomodoro.running) {
             // Start/Resume
+            if (Persistent.states.timer.pomodoro.phaseDuration <= 0) {
+                Persistent.states.timer.pomodoro.phaseDuration = root.targetLapDuration;
+            }
             Persistent.states.timer.pomodoro.start = getCurrentTimeInSeconds() + pomodoroSecondsLeft - pomodoroLapDuration;
+            Persistent.states.timer.pomodoro.pausedSecondsLeft = 0;
+        } else {
+            // Paused
+            Persistent.states.timer.pomodoro.pausedSecondsLeft = pomodoroSecondsLeft;
         }
     }
 
@@ -97,6 +127,9 @@ Singleton {
         Persistent.states.timer.pomodoro.isBreak = false;
         Persistent.states.timer.pomodoro.start = getCurrentTimeInSeconds();
         Persistent.states.timer.pomodoro.cycle = 0;
+        Persistent.states.timer.pomodoro.phaseDuration = 0;
+        Persistent.states.timer.pomodoro.pausedSecondsLeft = 0;
+        pomodoroSecondsLeft = focusTime;
         refreshPomodoro();
     }
 

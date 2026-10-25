@@ -11,6 +11,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
 import Quickshell
+import Quickshell.Io
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -22,50 +23,123 @@ ApplicationWindow {
     property string firstRunFileContent: "This file is just here to confirm you've been greeted :>"
     property real contentPadding: 8
     property bool showNextTime: false
-    property var pages: [
-        {
-            name: Translation.tr("Quick"),
-            icon: "instant_mix",
-            component: "modules/settings/QuickConfig.qml"
-        },
-        {
-            name: Translation.tr("General"),
-            icon: "browse",
-            component: "modules/settings/GeneralConfig.qml"
-        },
-        {
-            name: Translation.tr("Bar"),
-            icon: "toast",
-            iconRotation: 180,
-            component: "modules/settings/BarConfig.qml"
-        },
-        {
-            name: Translation.tr("Background"),
-            icon: "texture",
-            component: "modules/settings/BackgroundConfig.qml"
-        },
-        {
-            name: Translation.tr("Interface"),
-            icon: "bottom_app_bar",
-            component: "modules/settings/InterfaceConfig.qml"
-        },
-        {
-            name: Translation.tr("Services"),
-            icon: "settings",
-            component: "modules/settings/ServicesConfig.qml"
-        },
-        {
-            name: Translation.tr("Advanced"),
-            icon: "construction",
-            component: "modules/settings/AdvancedConfig.qml"
-        },
-        {
-            name: Translation.tr("About"),
-            icon: "info",
-            component: "modules/settings/About.qml"
+    readonly property bool usageEnabled: Config.options?.usage?.enable ?? true
+    property var pages: {
+        const list = [
+            {
+                name: Translation.tr("Quick"),
+                icon: "instant_mix",
+                component: "modules/settings/QuickConfig.qml"
+            },
+            {
+                name: Translation.tr("General"),
+                icon: "browse",
+                component: "modules/settings/GeneralConfig.qml"
+            },
+            {
+                name: Translation.tr("Bar"),
+                icon: "toast",
+                iconRotation: 180,
+                component: "modules/settings/BarConfig.qml"
+            },
+            {
+                name: Translation.tr("Background"),
+                icon: "texture",
+                component: "modules/settings/BackgroundConfig.qml"
+            },
+            {
+                name: Translation.tr("Interface"),
+                icon: "bottom_app_bar",
+                component: "modules/settings/InterfaceConfig.qml"
+            }
+        ];
+        if (root.usageEnabled) {
+            list.push({
+                name: Translation.tr("Usage"),
+                icon: "bar_chart",
+                component: "modules/settings/UsageConfig.qml"
+            });
         }
-    ]
+        list.push(
+            {
+                name: Translation.tr("Services"),
+                icon: "settings",
+                component: "modules/settings/ServicesConfig.qml"
+            },
+            {
+                name: Translation.tr("Advanced"),
+                icon: "construction",
+                component: "modules/settings/AdvancedConfig.qml"
+            },
+            {
+                name: Translation.tr("About"),
+                icon: "info",
+                component: "modules/settings/About.qml"
+            }
+        );
+        return list;
+    }
     property int currentPage: 0
+
+    onPagesChanged: {
+        let matched = false;
+        if (pageLoader && pageLoader.item) {
+            const currentSrc = pageLoader.source ? pageLoader.source.toString() : "";
+            for (let i = 0; i < pages.length; i++) {
+                if (currentSrc.endsWith(pages[i].component)) {
+                    root.currentPage = i;
+                    matched = true;
+                    break;
+                }
+            }
+        }
+        if (!matched) {
+            if (root.currentPage >= pages.length) {
+                root.currentPage = Math.max(0, pages.length - 1);
+            } else if (pageLoader && pageLoader.item) {
+                switchAnim.complete();
+                switchAnim.start();
+            }
+        }
+    }
+
+    function navigateToPage(pageName) {
+        if (!pageName) return;
+        let idx = -1;
+        let num = parseInt(pageName);
+        if (!isNaN(num) && num >= 0 && num < root.pages.length) {
+            idx = num;
+        } else {
+            for (let i = 0; i < root.pages.length; i++) {
+                if (root.pages[i].name.toLowerCase() === pageName.toLowerCase() ||
+                    root.pages[i].component.toLowerCase().includes(pageName.toLowerCase())) {
+                    idx = i;
+                    break;
+                }
+            }
+        }
+        if (idx >= 0) {
+            root.currentPage = idx;
+        }
+        root.show();
+        root.raise();
+        root.requestActivate();
+        Quickshell.execDetached(["bash", "-c", "printf 'hl.dispatch(hl.dsp.focus{ window = \\\"class:org.quickshell\\\" })\\n' | hyprctl repl 2>/dev/null || hyprctl dispatch focuswindow class:org.quickshell 2>/dev/null"]);
+    }
+
+    IpcHandler {
+        target: "settings"
+
+        function openPage(pageName: string): void {
+            root.navigateToPage(pageName);
+        }
+
+        function scrollTo(y: string): void {
+            if (pageLoader && pageLoader.item) {
+                pageLoader.item.contentY = parseFloat(y);
+            }
+        }
+    }
 
     visible: true
     onClosing: Qt.quit()
@@ -74,6 +148,10 @@ ApplicationWindow {
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()
         Config.readWriteDelay = 0 // Settings app always only sets one var at a time so delay isn't needed
+        const envPage = Quickshell.env("QS_SETTINGS_PAGE")
+        if (envPage && envPage.length > 0) {
+            root.navigateToPage(envPage);
+        }
     }
 
     minimumWidth: 750
@@ -240,12 +318,15 @@ ApplicationWindow {
 
                     active: Config.ready
                     Component.onCompleted: {
-                        source = root.pages[0].component
+                        source = root.pages[root.currentPage].component
                     }
 
                     Connections {
                         target: root
                         function onCurrentPageChanged() {
+                            if (pageLoader.source && pageLoader.source.toString().endsWith(root.pages[root.currentPage].component)) {
+                                return;
+                            }
                             switchAnim.complete();
                             switchAnim.start();
                         }

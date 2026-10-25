@@ -25,8 +25,15 @@ RippleButton {
         color: Appearance.colors.colOnLayer1
     }
 
+    MouseArea {
+        id: hoverArea
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+    }
+
     StyledToolTip {
         text: tooltipText
-        extraVisibleCondition: tooltipText.length > 0
+        extraVisibleCondition: tooltipText.length > 0 && hoverArea.containsMouse
     }
 }

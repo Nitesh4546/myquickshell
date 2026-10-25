@@ -21,14 +21,14 @@ OverlayBackground {
     property real maxCopyButtonSize: 20
 
     Component.onCompleted: {
-        noteFile.reload();
+        if (NotesService.text.length > 0 || NotesService.isLoaded) {
+            textInput.text = NotesService.text;
+        }
         updateCopyListEntries();
     }
 
     function saveContent() {
-        if (!textInput)
-            return;
-        noteFile.setText(root.content);
+        NotesService.saveNow();
     }
 
     function focusAtEnd() {
@@ -168,9 +168,14 @@ OverlayBackground {
 
                 onTextChanged: {
                     if (textInput.activeFocus) {
-                        saveDebounce.restart();
+                        NotesService.updateText(textInput.text, textInput);
                     }
                     root.scheduleCopylistUpdate(true);
+                }
+                onActiveFocusChanged: {
+                    if (!textInput.activeFocus) {
+                        NotesService.saveNow();
+                    }
                 }
                 
                 onHeightChanged: root.scheduleCopylistUpdate(true)
@@ -239,16 +244,9 @@ OverlayBackground {
             Layout.fillWidth: true
             Layout.margins: 16
             horizontalAlignment: Text.AlignRight
-            text: saveDebounce.running ? Translation.tr("Saving...") : Translation.tr("Saved    ")
+            text: NotesService.isSaving ? Translation.tr("Saving...") : Translation.tr("Saved    ")
             color: Appearance.colors.colSubtext
         }
-    }
-
-    Timer {
-        id: saveDebounce
-        interval: 500
-        repeat: false
-        onTriggered: saveContent()
     }
 
     Timer {
@@ -258,34 +256,21 @@ OverlayBackground {
         onTriggered: updateCopylistPositions()
     }
 
-    FileView {
-        id: noteFile
-        path: Qt.resolvedUrl(Directories.notesPath)
-        onLoaded: {
-            root.content = noteFile.text();
-            if (root.content !== root.content) {
+    Connections {
+        target: NotesService
+        function onTextModified(source) {
+            if (source !== textInput && root.content !== NotesService.text) {
                 const previousCursor = textInput.cursorPosition;
                 const previousAnchor = textInput.selectionStart;
-                root.content = root.content;
-                applySelection(previousCursor, previousAnchor);
-            }
-            if (pendingReload) {
-                pendingReload = false;
-                Qt.callLater(root.focusAtEnd);
-            }
-            Qt.callLater(root.updateCopyListEntries);
-        }
-        onLoadFailed: error => {
-            if (error === FileViewError.FileNotFound) {
-                root.content = "";
-                noteFile.setText(root.content);
+                root.content = NotesService.text;
+                if (textInput.activeFocus) {
+                    applySelection(previousCursor, previousAnchor);
+                }
                 if (pendingReload) {
                     pendingReload = false;
                     Qt.callLater(root.focusAtEnd);
                 }
                 Qt.callLater(root.updateCopyListEntries);
-            } else {
-                console.log("[Overlay Notes] Error loading file: " + error);
             }
         }
     }

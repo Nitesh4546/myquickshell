@@ -209,6 +209,13 @@ Singleton {
                         property real x: 400
                         property real y: 100
                     }
+                    property JsonObject usage: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free" // "free", "leastBusy", "mostBusy"
+                        property real x: 700
+                        property real y: 100
+                        property bool compact: false
+                    }
                 }
                 property string wallpaperPath: ""
                 property string thumbnailPath: ""
@@ -282,6 +289,14 @@ Singleton {
                 property JsonObject tooltips: JsonObject {
                     property bool clickToShow: false
                 }
+                property bool privacyIndicator: true
+                property JsonObject nextEvent: JsonObject {
+                    property bool enable: true
+                    property int lookaheadHours: 12
+                    property bool includeTasks: true
+                    property bool includeAllDay: false
+                    property int maxWidth: 220
+                }
             }
 
             property JsonObject battery: JsonObject {
@@ -306,6 +321,9 @@ Singleton {
                 property bool splitButtons: false
                 property bool useMouseSymbol: false
                 property bool useFnSymbol: false
+                property bool showPeriodicTable: true
+                property bool showTimetable: true
+                property bool showTasksInTimetable: true
                 property JsonObject fontSize: JsonObject {
                     property int key: Appearance.font.pixelSize.smaller
                     property int comment: Appearance.font.pixelSize.smaller
@@ -433,6 +451,7 @@ Singleton {
                 property bool orderRightLeft: false
                 property bool orderBottomUp: false
                 property bool centerIcons: true
+                property bool privacyMode: false
             }
 
             property JsonObject regionSelector: JsonObject {
@@ -498,6 +517,8 @@ Singleton {
 
             property JsonObject sidebar: JsonObject {
                 property bool keepRightSidebarLoaded: true
+                property bool tabAnimations: true
+                property bool showCalendarMarkers: true
                 property JsonObject translator: JsonObject {
                     property bool enable: false
                     property int delay: 300 // Delay before sending request. Reduces (potential) rate limits and lag.
@@ -592,6 +613,13 @@ Singleton {
             property JsonObject windows: JsonObject {
                 property bool showTitlebar: true // Client-side decoration for shell apps
                 property bool centerTitle: true
+            }
+
+            property JsonObject usage: JsonObject {
+                property bool enable: true
+                property int idleTimeoutSec: 120
+                property int retentionDays: 90
+                property list<string> excludedApps: ["org.quickshell", "quickshell"]
             }
 
             property JsonObject hacks: JsonObject {

@@ -1,3 +1,4 @@
+import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -13,28 +14,100 @@ import Quickshell.Hyprland
 
 Scope { // Scope
     id: root
-    property var tabButtonList: [
+    readonly property bool showPeriodicTable: Config.options?.cheatsheet?.showPeriodicTable ?? true
+    readonly property bool showTimetable: Config.options?.cheatsheet?.showTimetable ?? true
+
+    readonly property var allTabs: [
         {
+            "id": 0,
             "icon": "keyboard",
-            "name": Translation.tr("Keybinds")
+            "name": Translation.tr("Keybinds"),
+            "enabled": true
         },
         {
+            "id": 1,
             "icon": "experiment",
-            "name": Translation.tr("Elements")
+            "name": Translation.tr("Elements"),
+            "enabled": root.showPeriodicTable
         },
         {
+            "id": 2,
             "icon": "calendar_month",
-            "name": Translation.tr("Timetable")
-        },
+            "name": Translation.tr("Timetable"),
+            "enabled": root.showTimetable
+        }
     ]
+
+    readonly property var visibleTabs: allTabs.filter(tab => tab.enabled)
+    property var tabButtonList: visibleTabs.map(tab => ({ "icon": tab.icon, "name": tab.name }))
+
+    property bool cheatsheetLoadedOnce: false
+    property bool cheatsheetOpen: false
+    onCheatsheetOpenChanged: GlobalStates.cheatsheetOpen = cheatsheetOpen
+
+    Connections {
+        target: GlobalStates
+        function onOpenCheatsheetTab(tabIndex) {
+            if (root.cheatsheetOpen) {
+                const targetIdx = root.logicalToVisualIndex(tabIndex);
+                if (cheatsheetLoader.item && cheatsheetLoader.item.currentVisualIndex === targetIdx) {
+                    root.closeCheatsheet();
+                    return;
+                }
+            }
+            Persistent.states.cheatsheet.tabIndex = tabIndex;
+            root.openCheatsheet();
+            if (cheatsheetLoader.item) {
+                const targetIdx = root.logicalToVisualIndex(tabIndex);
+                cheatsheetLoader.item.jumpToVisualTab(targetIdx);
+            }
+        }
+    }
+
+    function openCheatsheet() {
+        cheatsheetLoadedOnce = true;
+        if (cheatsheetLoader.item) {
+            const savedLogical = Persistent.states.cheatsheet.tabIndex;
+            const expectedVisual = root.logicalToVisualIndex(savedLogical);
+            if (cheatsheetLoader.item.currentVisualIndex !== expectedVisual) {
+                cheatsheetLoader.item.jumpToVisualTab(expectedVisual);
+            }
+        }
+        cheatsheetOpen = true;
+    }
+
+    function closeCheatsheet() {
+        cheatsheetOpen = false;
+    }
+
+    function toggleCheatsheet() {
+        if (cheatsheetOpen) {
+            closeCheatsheet();
+        } else {
+            openCheatsheet();
+        }
+    }
+
+    function logicalToVisualIndex(logicalId) {
+        const idx = root.visibleTabs.findIndex(t => t.id === logicalId);
+        return idx >= 0 ? idx : 0;
+    }
+
+    function visualToLogicalIndex(visualIdx) {
+        if (visualIdx >= 0 && visualIdx < root.visibleTabs.length) {
+            return root.visibleTabs[visualIdx].id;
+        }
+        return 0;
+    }
 
     Loader {
         id: cheatsheetLoader
-        active: false
+        active: root.cheatsheetLoadedOnce
 
         sourceComponent: PanelWindow { // Window
             id: cheatsheetRoot
-            visible: cheatsheetLoader.active
+            visible: root.cheatsheetOpen && cheatsheetRoot.initialized
+            property bool initialized: false
 
             anchors {
                 top: true
@@ -44,22 +117,144 @@ Scope { // Scope
             }
 
             function hide() {
-                cheatsheetLoader.active = false;
+                root.closeCheatsheet();
             }
             exclusiveZone: 0
             implicitWidth: cheatsheetBackground.width + Appearance.sizes.elevationMargin * 2
             implicitHeight: cheatsheetBackground.height + Appearance.sizes.elevationMargin * 2
             WlrLayershell.namespace: "quickshell:cheatsheet"
-            WlrLayershell.keyboardFocus: cheatsheetTimetableTab.showAddDialog ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: (root.cheatsheetOpen && cheatsheetTimetableTab && cheatsheetTimetableTab.showAddDialog) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
             color: "transparent"
 
             mask: Region {
-                item: cheatsheetBackground
+                item: (root.cheatsheetOpen && cheatsheetRoot.initialized) ? cheatsheetBackground : null
+            }
+
+            readonly property alias currentVisualIndex: swipeView.currentIndex
+            function jumpToVisualTab(index) {
+                updatingPages = true;
+                swipeView.currentIndex = index;
+                if (swipeView.contentItem) {
+                    swipeView.contentItem.positionViewAtIndex(index, ListView.Beginning);
+                }
+                updatingPages = false;
+            }
+
+            property bool updatingPages: true
+            property Item periodicTableTab: null
+            property Item timetableTab: null
+            readonly property var cheatsheetTimetableTab: timetableTab
+
+            Component {
+                id: periodicTableComponent
+                CheatsheetPeriodicTable {}
+            }
+
+            Component {
+                id: timetableComponent
+                CheatsheetTimetable {}
+            }
+
+            function syncPages() {
+                if (root.showPeriodicTable) {
+                    if (!periodicTableTab) {
+                        periodicTableTab = periodicTableComponent.createObject(swipeView);
+                        swipeView.insertItem(1, periodicTableTab);
+                    }
+                } else {
+                    if (periodicTableTab) {
+                        swipeView.removeItem(periodicTableTab);
+                        periodicTableTab.destroy();
+                        periodicTableTab = null;
+                    }
+                }
+
+                if (root.showTimetable) {
+                    if (!timetableTab) {
+                        timetableTab = timetableComponent.createObject(swipeView);
+                        const insertIdx = periodicTableTab ? 2 : 1;
+                        swipeView.insertItem(insertIdx, timetableTab);
+                    }
+                } else {
+                    if (timetableTab) {
+                        swipeView.removeItem(timetableTab);
+                        timetableTab.destroy();
+                        timetableTab = null;
+                    }
+                }
+            }
+
+            function initPages() {
+                updatingPages = true;
+                syncPages();
+                const savedLogical = Persistent.states.cheatsheet.tabIndex;
+                const isSavedVisible = root.visibleTabs.some(t => t.id === savedLogical);
+                if (!isSavedVisible) {
+                    Persistent.states.cheatsheet.tabIndex = 0;
+                }
+                const targetIdx = root.logicalToVisualIndex(Persistent.states.cheatsheet.tabIndex);
+                swipeView.currentIndex = targetIdx;
+                if (swipeView.contentItem) {
+                    swipeView.contentItem.positionViewAtIndex(targetIdx, ListView.Beginning);
+                }
+                updatingPages = false;
+            }
+
+            function handleTogglesChanged() {
+                updatingPages = true;
+                const currentLogical = Persistent.states.cheatsheet.tabIndex;
+                const isCurrentVisible = root.visibleTabs.some(t => t.id === currentLogical);
+                if (!isCurrentVisible) {
+                    Persistent.states.cheatsheet.tabIndex = 0;
+                }
+                syncPages();
+                const targetIdx = root.logicalToVisualIndex(Persistent.states.cheatsheet.tabIndex);
+                swipeView.currentIndex = targetIdx;
+                if (swipeView.contentItem) {
+                    swipeView.contentItem.positionViewAtIndex(targetIdx, ListView.Beginning);
+                }
+                updatingPages = false;
+            }
+
+            Connections {
+                target: root
+                function onVisibleTabsChanged() {
+                    cheatsheetRoot.handleTogglesChanged();
+                }
             }
 
             Component.onCompleted: {
-                GlobalFocusGrab.addDismissable(cheatsheetRoot);
+                initPages();
+                initialized = true;
+                if (visible) {
+                    GlobalFocusGrab.addDismissable(cheatsheetRoot);
+                    closeButton.forceActiveFocus();
+                }
             }
+
+            onVisibleChanged: {
+                if (visible) {
+                    GlobalFocusGrab.addDismissable(cheatsheetRoot);
+                    closeButton.forceActiveFocus();
+                    const savedLogical = Persistent.states.cheatsheet.tabIndex;
+                    const expectedVisual = root.logicalToVisualIndex(savedLogical);
+                    if (swipeView.currentIndex !== expectedVisual) {
+                        updatingPages = true;
+                        swipeView.currentIndex = expectedVisual;
+                        if (swipeView.contentItem) {
+                            swipeView.contentItem.positionViewAtIndex(expectedVisual, ListView.Beginning);
+                        }
+                        updatingPages = false;
+                    }
+                } else {
+                    GlobalFocusGrab.removeDismissable(cheatsheetRoot);
+                    if (timetableTab) {
+                        timetableTab.showAddDialog = false;
+                        timetableTab.showViewDialog = false;
+                    }
+                }
+            }
+
             Component.onDestruction: {
                 GlobalFocusGrab.removeDismissable(cheatsheetRoot);
             }
@@ -89,19 +284,16 @@ Scope { // Scope
                     if (event.key === Qt.Key_Escape) {
                         cheatsheetRoot.hide();
                     }
-                    if (event.modifiers === Qt.ControlModifier) {
-                        if (event.key === Qt.Key_PageDown) {
-                            tabBar.incrementCurrentIndex();
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_PageUp) {
-                            tabBar.decrementCurrentIndex();
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Tab) {
-                            tabBar.setCurrentIndex((tabBar.currentIndex + 1) % root.tabButtonList.length);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Backtab) {
-                            tabBar.setCurrentIndex((tabBar.currentIndex - 1 + root.tabButtonList.length) % root.tabButtonList.length);
-                            event.accepted = true;
+                    if (event.modifiers & Qt.ControlModifier) {
+                        const count = root.tabButtonList.length;
+                        if (count > 1) {
+                            if (event.key === Qt.Key_PageDown || event.key === Qt.Key_Tab) {
+                                tabBar.setCurrentIndex((tabBar.currentIndex + 1) % count);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_PageUp || event.key === Qt.Key_Backtab) {
+                                tabBar.setCurrentIndex((tabBar.currentIndex - 1 + count) % count);
+                                event.accepted = true;
+                            }
                         }
                     }
                 }
@@ -137,6 +329,7 @@ Scope { // Scope
                     spacing: 10
 
                     Toolbar {
+                        visible: root.tabButtonList.length > 1
                         Layout.alignment: Qt.AlignHCenter
                         enableShadow: false
                         ToolbarTabBar {
@@ -155,13 +348,16 @@ Scope { // Scope
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         spacing: 10
-                        currentIndex: Persistent.states.cheatsheet.tabIndex
+                        currentIndex: 0
                         onCurrentIndexChanged: {
-                            Persistent.states.cheatsheet.tabIndex = currentIndex;
+                            if (cheatsheetRoot.updatingPages) return;
+                            if (currentIndex >= 0 && currentIndex < root.visibleTabs.length) {
+                                Persistent.states.cheatsheet.tabIndex = root.visualToLogicalIndex(currentIndex);
+                            }
                         }
 
-                        implicitWidth: Math.max.apply(null, contentChildren.map(child => child.implicitWidth || 0))
-                        implicitHeight: Math.max.apply(null, contentChildren.map(child => child.implicitHeight || 0))
+                        implicitWidth: Math.max.apply(null, [0].concat(contentChildren.map(child => child.implicitWidth || 0)))
+                        implicitHeight: Math.max.apply(null, [0].concat(contentChildren.map(child => child.implicitHeight || 0)))
 
                         clip: true
                         layer.enabled: true
@@ -174,10 +370,6 @@ Scope { // Scope
                         }
 
                         CheatsheetKeybinds {}
-                        CheatsheetPeriodicTable {}
-                        CheatsheetTimetable {
-                            id: cheatsheetTimetableTab
-                        }
                     }
                 }
             }
@@ -188,15 +380,27 @@ Scope { // Scope
         target: "cheatsheet"
 
         function toggle(): void {
-            cheatsheetLoader.active = !cheatsheetLoader.active;
+            root.toggleCheatsheet();
         }
 
         function close(): void {
-            cheatsheetLoader.active = false;
+            root.closeCheatsheet();
         }
 
         function open(): void {
-            cheatsheetLoader.active = true;
+            root.openCheatsheet();
+        }
+
+        function selectTab(logicalId: int): void {
+            Persistent.states.cheatsheet.tabIndex = logicalId;
+            if (cheatsheetLoader.item) {
+                const targetIdx = root.logicalToVisualIndex(logicalId);
+                cheatsheetLoader.item.jumpToVisualTab(targetIdx);
+            }
+        }
+
+        function openTab(logicalId: int): void {
+            GlobalStates.openCheatsheetTab(logicalId);
         }
     }
 
@@ -205,7 +409,7 @@ Scope { // Scope
         description: "Toggles cheatsheet on press"
 
         onPressed: {
-            cheatsheetLoader.active = !cheatsheetLoader.active;
+            root.toggleCheatsheet();
         }
     }
 
@@ -214,7 +418,7 @@ Scope { // Scope
         description: "Opens cheatsheet on press"
 
         onPressed: {
-            cheatsheetLoader.active = true;
+            root.openCheatsheet();
         }
     }
 
@@ -223,7 +427,7 @@ Scope { // Scope
         description: "Closes cheatsheet on press"
 
         onPressed: {
-            cheatsheetLoader.active = false;
+            root.closeCheatsheet();
         }
     }
 }

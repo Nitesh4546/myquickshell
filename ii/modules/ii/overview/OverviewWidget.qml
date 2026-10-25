@@ -295,7 +295,9 @@ Item {
                         StyledToolTip {
                             extraVisibleCondition: false
                             alternativeVisibleCondition: dragArea.containsMouse && !window.Drag.active
-                            text: `${windowData?.title}\n[${windowData?.class}] ${windowData?.xwayland ? "[XWayland] " : ""}`
+                            text: (Config.options.overview.privacyMode && !GlobalStates.overviewShowFull) ?
+                                `[${windowData?.class}] ${windowData?.xwayland ? "[XWayland] " : ""}`.trim() :
+                                `${windowData?.title}\n[${windowData?.class}] ${windowData?.xwayland ? "[XWayland] " : ""}`
                         }
                     }
                 }

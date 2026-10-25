@@ -110,7 +110,7 @@ RippleButton {
     }
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Delete && event.modifiers === Qt.ShiftModifier) {
-            const deleteAction = root.entry.actions.find(action => action.name == Translation.tr("Delete"));
+            const deleteAction = root.entry.actions.find(action => action.name == Translation.tr("Delete") || action.name == Translation.tr("Unpin"));
 
             if (deleteAction) {
                 deleteAction.execute()
@@ -195,8 +195,8 @@ RippleButton {
             }
             RowLayout {
                 Loader { // Checkmark for copied clipboard entry
-                    visible: itemName == Quickshell.clipboardText && root.cliphistRawString
-                    active: itemName == Quickshell.clipboardText && root.cliphistRawString
+                    visible: (itemName == Quickshell.clipboardText) && (root.cliphistRawString || root.entry?.type === Translation.tr("Pinned") || root.entry?.type === "Pinned")
+                    active: (itemName == Quickshell.clipboardText) && (root.cliphistRawString || root.entry?.type === Translation.tr("Pinned") || root.entry?.type === "Pinned")
                     sourceComponent: Rectangle {
                         implicitWidth: activeText.implicitHeight
                         implicitHeight: activeText.implicitHeight
@@ -232,10 +232,11 @@ RippleButton {
                 }
             }
             Loader { // Clipboard image preview
-                active: root.cliphistRawString && Cliphist.entryIsImage(root.cliphistRawString)
+                active: (root.cliphistRawString && Cliphist.entryIsImage(root.cliphistRawString)) || (root.entry && root.entry.sourcePath)
                 sourceComponent: CliphistImage {
                     Layout.fillWidth: true
                     entry: root.cliphistRawString
+                    sourcePath: root.entry?.sourcePath ?? ""
                     maxWidth: contentColumn.width
                     maxHeight: 140
                     blur: root.blurImage

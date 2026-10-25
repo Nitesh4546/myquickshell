@@ -72,6 +72,9 @@ Singleton {
                     property bool collapsed: false
                     property int tab: 0
                 }
+                property JsonObject todo: JsonObject {
+                    property string sortMode: "due"
+                }
             }
 
             property JsonObject booru: JsonObject {
@@ -151,6 +154,8 @@ Singleton {
                     property int start: 0
                     property bool isBreak: false
                     property int cycle: 0
+                    property int phaseDuration: 0
+                    property int pausedSecondsLeft: 0
                 }
                 property JsonObject stopwatch: JsonObject {
                     property bool running: false

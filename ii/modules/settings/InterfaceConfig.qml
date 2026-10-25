@@ -98,7 +98,35 @@ ContentPage {
                 Config.options.cheatsheet.fontSize.comment = value;
             }
         }
+
+        ConfigSwitch {
+            buttonIcon: "experiment"
+            text: Translation.tr("Show Elements (periodic table) tab")
+            checked: Config.options.cheatsheet.showPeriodicTable
+            onCheckedChanged: {
+                Config.options.cheatsheet.showPeriodicTable = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "calendar_month"
+            text: Translation.tr("Show Timetable tab")
+            checked: Config.options.cheatsheet.showTimetable
+            onCheckedChanged: {
+                Config.options.cheatsheet.showTimetable = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "task_alt"
+            text: Translation.tr("Show To Do tasks in Timetable")
+            checked: Config.options.cheatsheet.showTasksInTimetable
+            onCheckedChanged: {
+                Config.options.cheatsheet.showTasksInTimetable = checked;
+            }
+        }
     }
+
     ContentSection {
         icon: "call_to_action"
         title: Translation.tr("Dock")
@@ -485,6 +513,15 @@ ContentPage {
             }
             StyledToolTip {
                 text: Translation.tr("When enabled keeps the content of the right sidebar loaded to reduce the delay when opening,\nat the cost of around 15MB of consistent RAM usage. Delay significance depends on your system's performance.\nUsing a custom kernel like linux-cachyos might help")
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "event"
+            text: Translation.tr("Show events and tasks on sidebar calendar")
+            checked: Config.options.sidebar.showCalendarMarkers
+            onCheckedChanged: {
+                Config.options.sidebar.showCalendarMarkers = checked;
             }
         }
 

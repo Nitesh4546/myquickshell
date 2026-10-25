@@ -336,6 +336,88 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "upcoming"
+        title: Translation.tr("Next event")
+
+        ConfigSwitch {
+            buttonIcon: "upcoming"
+            text: Translation.tr("Show next event or task")
+            checked: Config.options.bar.nextEvent.enable
+            onCheckedChanged: {
+                Config.options.bar.nextEvent.enable = checked;
+            }
+        }
+
+        ConfigSwitch {
+            enabled: Config.options.bar.nextEvent.enable
+            buttonIcon: "task_alt"
+            text: Translation.tr("Include To Do tasks")
+            checked: Config.options.bar.nextEvent.includeTasks
+            onCheckedChanged: {
+                Config.options.bar.nextEvent.includeTasks = checked;
+            }
+        }
+
+        ConfigSwitch {
+            enabled: Config.options.bar.nextEvent.enable
+            buttonIcon: "calendar_today"
+            text: Translation.tr("Include all-day events")
+            checked: Config.options.bar.nextEvent.includeAllDay
+            onCheckedChanged: {
+                Config.options.bar.nextEvent.includeAllDay = checked;
+            }
+        }
+
+        ContentSubsection {
+            enabled: Config.options.bar.nextEvent.enable
+            title: Translation.tr("Lookahead window")
+
+            ConfigSelectionArray {
+                enabled: Config.options.bar.nextEvent.enable
+                currentValue: Config.options.bar.nextEvent.lookaheadHours
+                onSelected: newValue => {
+                    Config.options.bar.nextEvent.lookaheadHours = newValue;
+                }
+                options: [
+                    {
+                        displayName: Translation.tr("3 hours"),
+                        icon: "schedule",
+                        value: 3
+                    },
+                    {
+                        displayName: Translation.tr("6 hours"),
+                        icon: "schedule",
+                        value: 6
+                    },
+                    {
+                        displayName: Translation.tr("12 hours"),
+                        icon: "schedule",
+                        value: 12
+                    },
+                    {
+                        displayName: Translation.tr("24 hours"),
+                        icon: "schedule",
+                        value: 24
+                    }
+                ]
+            }
+        }
+
+        ConfigSpinBox {
+            enabled: Config.options.bar.nextEvent.enable
+            icon: "straighten"
+            text: Translation.tr("Maximum width (px)")
+            value: Config.options.bar.nextEvent.maxWidth
+            from: 100
+            to: 500
+            stepSize: 10
+            onValueChanged: {
+                Config.options.bar.nextEvent.maxWidth = value;
+            }
+        }
+    }
+
+    ContentSection {
         icon: "tooltip"
         title: Translation.tr("Tooltips")
         ConfigSwitch {

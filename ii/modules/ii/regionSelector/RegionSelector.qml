@@ -54,6 +54,12 @@ Scope {
         GlobalStates.regionSelectorOpen = true
     }
 
+    function qr() {
+        root.action = RegionSelection.SnipAction.Qr
+        root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        GlobalStates.regionSelectorOpen = true
+    }
+
     function record() {
         root.action = RegionSelection.SnipAction.Record
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
@@ -81,6 +87,9 @@ Scope {
         }
         function ocr() {
             root.ocr()
+        }
+        function qr() {
+            root.qr()
         }
         function record() {
             root.record()

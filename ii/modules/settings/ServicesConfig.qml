@@ -203,6 +203,25 @@ ContentPage {
         }
     }
 
+    ContentSection {
+        icon: "bar_chart"
+        title: Translation.tr("Usage Tracking")
+
+        ConfigSwitch {
+            buttonIcon: "monitoring"
+            text: Translation.tr("Enable tracking service")
+            checked: Config.options?.usage?.enable ?? true
+            onCheckedChanged: {
+                if (Config.options?.usage) {
+                    Config.options.usage.enable = checked;
+                }
+            }
+            StyledToolTip {
+                text: Translation.tr("Record focused application duration per day")
+            }
+        }
+    }
+
     // There's no update indicator in ii for now so we shouldn't show this yet
     // ContentSection {
     //     icon: "deployed_code_update"

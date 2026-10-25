@@ -12,6 +12,53 @@ Item {
     Layout.fillWidth: true
     Layout.fillHeight: true
 
+    // Top-right Lap button
+    RippleButton {
+        id: lapBtn
+        anchors {
+            top: parent.top
+            right: parent.right
+            topMargin: 2
+            rightMargin: 2
+        }
+        z: 2
+        implicitHeight: 32
+        implicitWidth: lapContentRow.implicitWidth + 24
+        buttonRadius: Appearance.rounding.full
+        enabled: TimerService.stopwatchRunning
+
+        colBackground: Appearance.colors.colLayer2
+        colBackgroundHover: Appearance.colors.colLayer2Hover
+        colRipple: Appearance.colors.colLayer2Active
+
+        contentItem: RowLayout {
+            id: lapContentRow
+            anchors.centerIn: parent
+            spacing: 6
+
+            MaterialSymbol {
+                text: "flag"
+                iconSize: 18
+                color: lapBtn.enabled ? Appearance.colors.colOnLayer2 : Appearance.colors.colSubtext
+            }
+
+            StyledText {
+                text: Translation.tr("Lap")
+                font.pixelSize: Appearance.font.pixelSize.small
+                font.weight: Font.Medium
+                color: lapBtn.enabled ? Appearance.colors.colOnLayer2 : Appearance.colors.colSubtext
+            }
+        }
+
+        StyledToolTip {
+            text: Translation.tr("Record lap (L)")
+        }
+
+        onClicked: {
+            TimerService.stopwatchRecordLap();
+        }
+    }
+
     Item {
         anchors {
             fill: parent
@@ -26,8 +73,8 @@ Item {
             anchors {
                 top: undefined
                 verticalCenter: parent.verticalCenter
-                left: controlButtons.left
-                leftMargin: 6
+                verticalCenterOffset: -20
+                horizontalCenter: parent.horizontalCenter
             }
 
             states: State {
@@ -37,7 +84,7 @@ Item {
                     target: elapsedIndicator
                     anchors.top: parent.top
                     anchors.verticalCenter: undefined
-                    anchors.left: controlButtons.left
+                    anchors.horizontalCenter: parent.horizontalCenter
                 }
             }
 
@@ -76,11 +123,11 @@ Item {
             id: lapsList
             anchors {
                 top: elapsedIndicator.bottom
-                bottom: controlButtons.top
+                bottom: parent.bottom
                 left: parent.left
                 right: parent.right
                 topMargin: 16
-                bottomMargin: 16
+                bottomMargin: 47
             }
             spacing: 4
             clip: true
@@ -146,60 +193,6 @@ Item {
                             return `+${minutes == "00" ? "" : minutes + ":"}${seconds}.${_10ms}`
                         }
                     }
-                }
-            }
-        }
-
-        RowLayout {
-            id: controlButtons
-            anchors {
-                horizontalCenter: parent.horizontalCenter
-                bottom: parent.bottom
-                bottomMargin: 6
-            }
-            spacing: 4
-
-            RippleButton {
-                Layout.preferredHeight: 35
-                Layout.preferredWidth: 90
-                font.pixelSize: Appearance.font.pixelSize.larger
-
-                onClicked: {
-                    TimerService.toggleStopwatch()
-                }
-
-                colBackground: TimerService.stopwatchRunning ? Appearance.colors.colSecondaryContainer : Appearance.colors.colPrimary 
-                colBackgroundHover: TimerService.stopwatchRunning ? Appearance.colors.colSecondaryContainerHover : Appearance.colors.colPrimaryHover 
-                colRipple: TimerService.stopwatchRunning ? Appearance.colors.colSecondaryContainerActive : Appearance.colors.colPrimaryActive 
-
-                contentItem: StyledText {
-                    horizontalAlignment: Text.AlignHCenter
-                    color: TimerService.stopwatchRunning ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnPrimary
-                    text: TimerService.stopwatchRunning ? Translation.tr("Pause") : TimerService.stopwatchTime === 0 ? Translation.tr("Start") : Translation.tr("Resume")
-                }
-            }
-
-            RippleButton {
-                implicitHeight: 35
-                implicitWidth: 90
-                font.pixelSize: Appearance.font.pixelSize.larger
-
-                onClicked: {
-                    if (TimerService.stopwatchRunning) 
-                        TimerService.stopwatchRecordLap()
-                    else 
-                        TimerService.stopwatchReset()
-                }
-                enabled: TimerService.stopwatchTime > 0 || Persistent.states.timer.stopwatch.laps.length > 0
-
-                colBackground: TimerService.stopwatchRunning ? Appearance.colors.colLayer2 : Appearance.colors.colErrorContainer
-                colBackgroundHover: TimerService.stopwatchRunning ? Appearance.colors.colLayer2Hover : Appearance.colors.colErrorContainerHover
-                colRipple: TimerService.stopwatchRunning ? Appearance.colors.colLayer2Active : Appearance.colors.colErrorContainerActive
-
-                contentItem: StyledText {
-                    horizontalAlignment: Text.AlignHCenter
-                    text: TimerService.stopwatchRunning ? Translation.tr("Lap") : Translation.tr("Reset")
-                    color: TimerService.stopwatchRunning ? Appearance.colors.colOnLayer2 : Appearance.colors.colOnErrorContainer
                 }
             }
         }

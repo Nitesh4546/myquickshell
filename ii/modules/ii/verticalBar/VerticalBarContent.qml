@@ -141,6 +141,25 @@ Item { // Bar content region
             }
 
             HorizontalBarSeparator {
+                visible: nextEventLoader.visible
+            }
+
+            Loader {
+                id: nextEventLoader
+                active: Config.options?.bar?.nextEvent?.enable ?? true
+                visible: active && item && item.hasItem
+                Layout.preferredWidth: (item && item.hasItem) ? item.implicitWidth : 0
+                Layout.preferredHeight: (item && item.hasItem) ? item.implicitHeight : 0
+                Layout.fillWidth: true
+                Layout.fillHeight: false
+                Layout.alignment: Qt.AlignHCenter
+
+                sourceComponent: Bar.NextEventWidget {
+                    vertical: true
+                }
+            }
+
+            HorizontalBarSeparator {
                 visible: Battery.available
             }
 
@@ -283,6 +302,20 @@ Item { // Bar content region
                         text: BluetoothStatus.connected ? "bluetooth_connected" : BluetoothStatus.enabled ? "bluetooth" : "bluetooth_disabled"
                         iconSize: Appearance.font.pixelSize.larger
                         color: rightSidebarButton.colText
+                    }
+                    Revealer {
+                        vertical: true
+                        reveal: (Config.options?.bar?.privacyIndicator ?? true) && Privacy.anyActive
+                        Layout.fillWidth: true
+                        Layout.topMargin: reveal ? 6 : 0
+                        Behavior on Layout.topMargin {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
+
+                        Bar.PrivacyIndicator {
+                            vertical: true
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
                     }
                 }
             }

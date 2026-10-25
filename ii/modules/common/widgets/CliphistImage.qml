@@ -15,10 +15,11 @@ Rectangle {
     property bool blur: false
     property string blurText: "Image hidden"
 
+    property string sourcePath: ""
     property string imageDecodePath: Directories.cliphistDecode
     property string imageDecodeFileName: `${entryNumber}`
     property string imageDecodeFilePath: `${imageDecodePath}/${imageDecodeFileName}`
-    property string source
+    property string source: sourcePath ? sourcePath : ""
 
     property int entryNumber: {
         if (!root.entry)
@@ -27,16 +28,18 @@ Rectangle {
         return match ? parseInt(match[1]) : 0;
     }
     property int imageWidth: {
-        if (!root.entry)
-            return 0;
-        const match = root.entry.match(/(\d+)x(\d+)/);
-        return match ? parseInt(match[1]) : 0;
+        if (root.entry) {
+            const match = root.entry.match(/(\d+)x(\d+)/);
+            if (match) return parseInt(match[1]);
+        }
+        return image.implicitWidth > 0 ? image.implicitWidth : 0;
     }
     property int imageHeight: {
-        if (!root.entry)
-            return 0;
-        const match = root.entry.match(/(\d+)x(\d+)/);
-        return match ? parseInt(match[2]) : 0;
+        if (root.entry) {
+            const match = root.entry.match(/(\d+)x(\d+)/);
+            if (match) return parseInt(match[2]);
+        }
+        return image.implicitHeight > 0 ? image.implicitHeight : 0;
     }
     property real scale: {
         return Math.min(root.maxWidth / imageWidth, root.maxHeight / imageHeight, 1);
@@ -48,7 +51,9 @@ Rectangle {
     implicitWidth: imageWidth * scale
 
     Component.onCompleted: {
-        decodeImageProcess.running = true;
+        if (!root.sourcePath) {
+            decodeImageProcess.running = true;
+        }
     }
 
     Process {
@@ -65,7 +70,9 @@ Rectangle {
     }
 
     Component.onDestruction: {
-        Quickshell.execDetached(["bash", "-c", `[ -f '${imageDecodeFilePath}' ] && rm -f '${imageDecodeFilePath}'`]);
+        if (!root.sourcePath) {
+            Quickshell.execDetached(["bash", "-c", `[ -f '${imageDecodeFilePath}' ] && rm -f '${imageDecodeFilePath}'`]);
+        }
     }
 
     layer.enabled: true

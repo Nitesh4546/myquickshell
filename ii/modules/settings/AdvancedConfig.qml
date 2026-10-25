@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -90,6 +91,37 @@ ContentPage {
         }
     }
 
+    ContentSection {
+        icon: "privacy_tip"
+        title: Translation.tr("Privacy")
 
+        ConfigSwitch {
+            buttonIcon: "fiber_manual_record"
+            text: Translation.tr("Show privacy indicator (mic/camera in use)")
+            checked: Config.options.bar.privacyIndicator
+            onCheckedChanged: {
+                Config.options.bar.privacyIndicator = checked;
+            }
+        }
 
+        ConfigSwitch {
+            buttonIcon: "visibility_off"
+            text: Translation.tr("Hide window previews in Overview (privacy mode)")
+            checked: Config.options.overview.privacyMode
+            onCheckedChanged: {
+                Config.options.overview.privacyMode = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Overview shows only app icons. Press Super+, to open the full Overview.")
+            }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 12
+            color: Appearance.colors.colSubtext
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            text: Translation.tr("Overview shows only app icons. Press Super+, to open the full Overview.")
+        }
+    }
 }
